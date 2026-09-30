@@ -1,0 +1,224 @@
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import {
+  ThumbsUp,
+  Share2,
+  BookmarkPlus,
+  Play,
+  Check,
+  UserCheck,
+  UserPlus,
+} from "lucide-react";
+import CommentSection from "../components/CommentSection";
+import VideoCard from "../components/VideoCard";
+import { useAuth } from "../context/AuthContext";
+
+export default function Watch({ currentVideo, relatedVideos = [] }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Video details from prop or fallback
+  const title = currentVideo?.title || "Video Player Preview";
+  const videoSrc = currentVideo?.videoFile;
+  const thumbnail = currentVideo?.thumbnail;
+  const description = currentVideo?.description || "No description provided for this video.";
+  const views = currentVideo?.views !== undefined ? currentVideo.views : "--";
+  const createdAt = currentVideo?.createdAt ? new Date(currentVideo.createdAt).toLocaleDateString() : "--";
+  const ownerName = currentVideo?.owner?.fullName || currentVideo?.owner?.username || "Channel Creator";
+  const ownerAvatar = currentVideo?.owner?.avatar;
+  const ownerHandle = currentVideo?.owner?.username ? `@${currentVideo.owner.username}` : "@creator";
+
+  const handleShare = () => {
+    navigator.clipboard?.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSubscribe = () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+    setIsSubscribed(!isSubscribed);
+  };
+
+  const handleLike = () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+    setIsLiked(!isLiked);
+  };
+
+  const handleSaveToPlaylist = (e) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      navigate(`/login?redirect=${encodeURIComponent("/playlists")}`);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12">
+      {/* Left / Main Column: Player + Details + Comments */}
+      <div className="lg:col-span-8 space-y-5">
+        {/* Video Player Area */}
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex items-center justify-center group">
+          {videoSrc ? (
+            <video
+              src={videoSrc}
+              poster={thumbnail}
+              controls
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/20 p-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-3 shadow-xl">
+                <Play className="w-8 h-8 fill-current ml-1" />
+              </div>
+              <p className="text-slate-200 font-semibold text-sm">
+                Video Player Ready
+              </p>
+              <p className="text-slate-500 text-xs mt-1">
+                Video stream and player controls ready for media playback
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Video Title */}
+        <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-snug">
+          {title}
+        </h1>
+
+        {/* Channel Info & Actions Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          {/* Channel Owner */}
+          <div className="flex items-center gap-3">
+            {ownerAvatar ? (
+              <img
+                src={ownerAvatar}
+                alt={ownerName}
+                className="w-10 h-10 rounded-full object-cover border border-slate-700"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                {ownerName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h3 className="font-semibold text-slate-100 text-sm">{ownerName}</h3>
+              <p className="text-xs text-slate-400">{ownerHandle}</p>
+            </div>
+
+            {/* Subscribe Button */}
+            <button
+              onClick={handleSubscribe}
+              className={`ml-3 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                isSubscribed
+                  ? "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-indigo-600/20"
+              }`}
+            >
+              {isSubscribed ? (
+                <span className="flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  Subscribed
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Subscribe
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Like button */}
+            <button
+              onClick={handleLike}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                isLiked
+                  ? "bg-indigo-600/20 border-indigo-500/40 text-indigo-400"
+                  : "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              <ThumbsUp className="w-3.5 h-3.5" />
+              <span>{isLiked ? "Liked" : "Like"}</span>
+            </button>
+
+            {/* Share button */}
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+              <span>{copied ? "Copied" : "Share"}</span>
+            </button>
+
+            {/* Save to playlist */}
+            <Link
+              to="/playlists"
+              onClick={handleSaveToPlaylist}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 transition-colors"
+            >
+              <BookmarkPlus className="w-3.5 h-3.5" />
+              <span>Save</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Video Description Box */}
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-300 space-y-2">
+          <div className="flex items-center gap-3 text-slate-400 font-medium">
+            <span>{typeof views === "number" ? `${views} views` : `${views} views`}</span>
+            <span>•</span>
+            <span>{createdAt}</span>
+          </div>
+
+          <p className={`leading-relaxed whitespace-pre-line ${!isDescExpanded && "line-clamp-2"}`}>
+            {description}
+          </p>
+
+          <button
+            onClick={() => setIsDescExpanded(!isDescExpanded)}
+            className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer block pt-1"
+          >
+            {isDescExpanded ? "Show less" : "Show more"}
+          </button>
+        </div>
+
+        {/* Comments Section */}
+        <CommentSection />
+      </div>
+
+      {/* Right Column: Up Next / Related Videos */}
+      <div className="lg:col-span-4 space-y-4">
+        <h3 className="text-base font-semibold text-slate-100">Related Videos</h3>
+        <div className="space-y-3">
+          {relatedVideos.length > 0 ? (
+            relatedVideos.map((video) => (
+              <VideoCard key={video._id} video={video} variant="compact" />
+            ))
+          ) : (
+            Array.from({ length: 6 }).map((_, idx) => (
+              <VideoCard
+                key={`related-placeholder-${idx}`}
+                title="Up Next Stream"
+                category="Recommended"
+                variant="compact"
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
