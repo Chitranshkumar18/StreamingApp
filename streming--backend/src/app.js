@@ -6,9 +6,23 @@ import cookieParser from "cookie-parser";
 
 const app = express()
 
+const allowedOrigins = [
+    process.env.CORS_ORIGIN,
+    "https://streaming-app-olive.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173"
+].filter(Boolean);
+
 app.use(cors({
-    origin:process.env.CORS_ORIGIN,
-    credentials:true
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+            callback(null, true);
+        } else {
+            callback(null, origin);
+        }
+    },
+    credentials: true
 }))
 
 app.use(express.json({limit:"16kb"}))

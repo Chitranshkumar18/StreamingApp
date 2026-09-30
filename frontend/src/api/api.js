@@ -5,7 +5,12 @@
  * Currently, no real network requests are executed.
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "https://streamingapp-6adv.onrender.com/api/v1";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL && !import.meta.env.DEV
+    ? import.meta.env.VITE_API_URL
+    : import.meta.env.DEV
+    ? "/api/v1"
+    : "https://streamingapp-6adv.onrender.com/api/v1";
 
 export const ENDPOINTS = {
   // Auth & User routes

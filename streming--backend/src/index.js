@@ -10,8 +10,9 @@ dotenv.config({
 
 connectDB()
     .then(() => {
-        app.listen(process.env.CORS_ORIGIN , () => {
-            console.log(`⚙️  Server is running at port: ${process.env.CORS_ORIGIN}`);
+        const port = process.env.PORT || 8000;
+        app.listen(port, () => {
+            console.log(`⚙️  Server is running at port: ${port}`);
         });
     })
     .catch((err) => {

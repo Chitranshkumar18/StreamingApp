@@ -8,4 +8,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://streamingapp-6adv.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })
