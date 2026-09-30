@@ -1,9 +1,34 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ThumbsUp, Play } from "lucide-react";
 import VideoCard from "../components/VideoCard";
 import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
-export default function LikedVideos({ likedVideos = [] }) {
+export default function LikedVideos() {
+  const [likedVideos, setLikedVideos] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLikedVideos = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(ENDPOINTS.LIKES.GET_LIKED_VIDEOS, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data?.data || []).map((item) => item.video || item);
+          setLikedVideos(items);
+        }
+      } catch (err) {
+        console.error("Failed to fetch liked videos:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLikedVideos();
+  }, []);
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}

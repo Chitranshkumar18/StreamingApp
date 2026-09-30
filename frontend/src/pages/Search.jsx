@@ -1,13 +1,52 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search as SearchIcon, Filter } from "lucide-react";
 import VideoCard from "../components/VideoCard";
 import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
-export default function Search({ searchResults = [] }) {
+export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const [searchInput, setSearchInput] = useState(query);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setSearchInput(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const fetchSearchResults = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(
+          `${ENDPOINTS.VIDEOS.GET_ALL}?query=${encodeURIComponent(query)}`,
+          {
+            credentials: "include",
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const videoList = Array.isArray(data?.data)
+            ? data.data
+            : data?.data?.videos || [];
+          setSearchResults(videoList);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (err) {
+        console.error("Failed to search videos:", err);
+        setSearchResults([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSearchResults();
+  }, [query]);
 
   const handleSearch = (e) => {
     e.preventDefault();

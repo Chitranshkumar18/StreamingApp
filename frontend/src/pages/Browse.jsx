@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Compass, Flame, LayoutGrid, Filter } from "lucide-react";
+import { Compass, Flame, LayoutGrid, Filter, Film } from "lucide-react";
 import VideoCard from "../components/VideoCard";
+import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
 const CATEGORIES = [
   "All",
@@ -15,11 +17,61 @@ const CATEGORIES = [
   "Podcasts",
 ];
 
-export default function Browse({ videos = [] }) {
+export default function Browse() {
   const [searchParams] = useSearchParams();
   const currentTab = searchParams.get("tab") || "all";
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("latest");
+  const [videos, setVideos] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchVideos = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(ENDPOINTS.VIDEOS.GET_ALL, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const videoList = Array.isArray(data?.data)
+            ? data.data
+            : data?.data?.videos || [];
+          setVideos(videoList);
+        }
+      } catch (err) {
+        console.error("Failed to fetch videos in Browse:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVideos();
+  }, []);
+
+  // Filter & sort videos
+  let displayedVideos = [...videos];
+
+  if (selectedCategory !== "All") {
+    displayedVideos = displayedVideos.filter((video) => {
+      const matchCategory = video.category?.toLowerCase() === selectedCategory.toLowerCase();
+      const matchTitle = video.title?.toLowerCase().includes(selectedCategory.toLowerCase());
+      const matchDesc = video.description?.toLowerCase().includes(selectedCategory.toLowerCase());
+      return matchCategory || matchTitle || matchDesc;
+    });
+  }
+
+  if (sortBy === "views") {
+    displayedVideos.sort((a, b) => (b.views || 0) - (a.views || 0));
+  } else if (sortBy === "oldest") {
+    displayedVideos.sort(
+      (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+    );
+  } else {
+    displayedVideos.sort(
+      (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -81,23 +133,25 @@ export default function Browse({ videos = [] }) {
         ))}
       </div>
 
-      {/* Video Grid or Placeholder Grid */}
-      {videos.length > 0 ? (
+      {/* Video Grid or Empty State */}
+      {displayedVideos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {videos.map((video) => (
+          {displayedVideos.map((video) => (
             <VideoCard key={video._id} video={video} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, idx) => (
-            <VideoCard
-              key={`browse-placeholder-${idx}`}
-              title="Stream Video"
-              category={selectedCategory === "All" ? "Featured" : selectedCategory}
-            />
-          ))}
-        </div>
+        <EmptyState
+          icon={Film}
+          title={isLoading ? "Loading videos..." : "No videos found"}
+          description={
+            isLoading
+              ? "Fetching videos from the database..."
+              : selectedCategory !== "All"
+              ? `No videos found in the "${selectedCategory}" category.`
+              : "No videos are available on the platform right now."
+          }
+        />
       )}
     </div>
   );

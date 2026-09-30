@@ -1,24 +1,67 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MessageSquare, ThumbsUp, Send, Trash2, Edit, X } from "lucide-react";
 import EmptyState from "../components/EmptyState";
+import { useAuth } from "../context/AuthContext";
+import { ENDPOINTS } from "../api/api";
 
-export default function Tweets({
-  tweets = [],
-  onCreateTweet,
-  onDeleteTweet,
-  onUpdateTweet,
-  onToggleLike,
-}) {
+export default function Tweets() {
+  const { user } = useAuth();
+  const [tweets, setTweets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [content, setContent] = useState("");
   const [editingTweetId, setEditingTweetId] = useState(null);
   const [editContent, setEditContent] = useState("");
 
-  const handleCreate = (e) => {
+  const fetchTweets = async () => {
+    setIsLoading(true);
+    try {
+      const userId = user?._id || "me";
+      const res = await fetch(ENDPOINTS.TWEETS.GET_USER_TWEETS(userId), {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTweets(data?.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch tweets:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTweets();
+  }, [user]);
+
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
-    if (onCreateTweet) {
-      onCreateTweet(content);
+
+    try {
+      const res = await fetch(ENDPOINTS.TWEETS.CREATE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ content: content.trim() }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const newTweet = data?.data;
+        if (newTweet) {
+          if (!newTweet.owner && user) {
+            newTweet.owner = user;
+          }
+          setTweets((prev) => [newTweet, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to create tweet:", err);
     }
+
     setContent("");
   };
 
@@ -27,12 +70,66 @@ export default function Tweets({
     setEditContent(tweet.content || "");
   };
 
-  const handleSaveEdit = (tweetId) => {
+  const handleSaveEdit = async (tweetId) => {
     if (!editContent.trim()) return;
-    if (onUpdateTweet) {
-      onUpdateTweet(tweetId, editContent);
+
+    try {
+      const res = await fetch(ENDPOINTS.TWEETS.UPDATE(tweetId), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ content: editContent.trim() }),
+      });
+
+      if (res.ok) {
+        setTweets((prev) =>
+          prev.map((t) =>
+            t._id === tweetId ? { ...t, content: editContent.trim() } : t
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update tweet:", err);
     }
+
     setEditingTweetId(null);
+  };
+
+  const handleDeleteTweet = async (tweetId) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      const res = await fetch(ENDPOINTS.TWEETS.DELETE(tweetId), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setTweets((prev) => prev.filter((t) => t._id !== tweetId));
+      }
+    } catch (err) {
+      console.error("Failed to delete tweet:", err);
+    }
+  };
+
+  const handleToggleLike = async (tweetId) => {
+    try {
+      const res = await fetch(ENDPOINTS.LIKES.TOGGLE_TWEET_LIKE(tweetId), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setTweets((prev) =>
+          prev.map((t) =>
+            t._id === tweetId
+              ? { ...t, likesCount: (t.likesCount || 0) + 1 }
+              : t
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle tweet like:", err);
+    }
   };
 
   return (
@@ -120,7 +217,7 @@ export default function Tweets({
                     <Edit className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => onDeleteTweet && onDeleteTweet(tweet._id)}
+                    onClick={() => handleDeleteTweet(tweet._id)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -161,7 +258,7 @@ export default function Tweets({
               {/* Tweet Actions */}
               <div className="flex items-center gap-4 pt-2 border-t border-slate-800/60 text-xs text-slate-400">
                 <button
-                  onClick={() => onToggleLike && onToggleLike(tweet._id)}
+                  onClick={() => handleToggleLike(tweet._id)}
                   className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors cursor-pointer"
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />

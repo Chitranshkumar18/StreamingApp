@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   FolderUp,
@@ -12,16 +12,68 @@ import {
   X,
 } from "lucide-react";
 import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
-export default function MyUploads({
-  videos = [],
-  onTogglePublish,
-  onDeleteVideo,
-  onUpdateVideo,
-}) {
+export default function MyUploads() {
+  const [videos, setVideos] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingVideo, setEditingVideo] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+
+  const fetchMyVideos = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(ENDPOINTS.DASHBOARD.GET_VIDEOS, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data?.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user uploads:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyVideos();
+  }, []);
+
+  const handleTogglePublish = async (videoId) => {
+    try {
+      const res = await fetch(ENDPOINTS.VIDEOS.TOGGLE_PUBLISH(videoId), {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setVideos((prev) =>
+          prev.map((v) =>
+            v._id === videoId ? { ...v, isPublished: !v.isPublished } : v
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle publish status:", err);
+    }
+  };
+
+  const handleDeleteVideo = async (videoId) => {
+    if (!window.confirm("Are you sure you want to delete this video?")) return;
+    try {
+      const res = await fetch(ENDPOINTS.VIDEOS.DELETE(videoId), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setVideos((prev) => prev.filter((v) => v._id !== videoId));
+      }
+    } catch (err) {
+      console.error("Failed to delete video:", err);
+    }
+  };
 
   const handleStartEdit = (video) => {
     setEditingVideo(video);
@@ -29,10 +81,27 @@ export default function MyUploads({
     setDescription(video.description || "");
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (onUpdateVideo && editingVideo) {
-      onUpdateVideo(editingVideo._id, { title, description });
+    if (!editingVideo) return;
+    try {
+      const res = await fetch(ENDPOINTS.VIDEOS.UPDATE(editingVideo._id), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ title, description }),
+      });
+      if (res.ok) {
+        setVideos((prev) =>
+          prev.map((v) =>
+            v._id === editingVideo._id ? { ...v, title, description } : v
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update video:", err);
     }
     setEditingVideo(null);
   };

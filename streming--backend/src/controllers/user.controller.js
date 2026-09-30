@@ -4,8 +4,14 @@ import { ApiResponse} from "../utils/ApiResponse.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {User} from "../models/user.model.js"
 import mongoose from "mongoose"
+import jwt from "jsonwebtoken"
 
-
+const isProduction = process.env.NODE_ENV === "production";
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax"
+};
 
 const generateAccessAndRefreshToken = async(userId)=>{
     try {
@@ -56,7 +62,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
     //console.log(req.files);
 
-    const avatarLocalPath = req.files?.avatar[0]?.path;
+    const avatarLocalPath = req.files?.avatar?.[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
     let coverImageLocalPath;
@@ -70,7 +76,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const coverImage = coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) : null
 
     if (!avatar) {
         throw new ApiError(400, "Avatar file is required")
@@ -115,7 +121,7 @@ const loginUser = asyncHandler(async(req,res)=>{
 
     const {username, password, email} = req.body
 
-    if(!username || !email){
+    if(!username && !email){
         throw new ApiError(400, "username or email is required")
     }
 
@@ -144,16 +150,10 @@ const loginUser = asyncHandler(async(req,res)=>{
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
 
-    const option = {
-        httpOnly: true,
-        secure: true
-    }
-
-
     return res
     .status(200)
-    .cookie("accessToken", accessToken, option)
-    .cookie("refreshToken", refreshToken, option)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
     .json(
         new ApiResponse(
             200,
@@ -183,15 +183,10 @@ const logoutUser = asyncHandler(async(req,res)=>{
         }
     )
 
-    const option ={
-        httpOnly: true,
-        secure: true
-    }
-
     return res
     .status(200)
-    .clearCookie("accessToken", option)
-    .clearCookie("refreshToken", option)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
     .json(
         new ApiResponse(200, {}, "User logged out Successfully")
     )
@@ -200,14 +195,14 @@ const logoutUser = asyncHandler(async(req,res)=>{
 
 
 const refreshAccessToken = asyncHandler(async(req,res) =>{
-    const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
 
     if(!incomingRefreshToken){
         throw new ApiError(401, "Unauthorized request")
     }
 
     try {
-        const decodedToken = JsonWebTokenError.verify(
+        const decodedToken = jwt.verify(
             incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
         )
@@ -222,16 +217,12 @@ const refreshAccessToken = asyncHandler(async(req,res) =>{
             throw new ApiError(401, "Invalid Access Token")
         }
 
-        const options ={
-            httpOnly : true,
-            secure: true
-        }
         const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
 
         return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
+        .cookie("accessToken", accessToken, cookieOptions)
+        .cookie("refreshToken", newRefreshToken, cookieOptions)
         .json(
             new ApiResponse(
                 200,
@@ -282,7 +273,7 @@ const getCurrentUser = asyncHandler(async(req, res) =>{
 
 
 const updateAccountDetails = asyncHandler(async(req, res)=>{
-    const {fullName, eamil} = req.body
+    const {fullName, email} = req.body
 
     if(!fullName || !email){
         throw new ApiError(400, "All fields are required")
@@ -348,10 +339,10 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "cover image is missing")
     }
 
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImagePath)
 
-    if (!coverImage.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
+    if (!coverImage?.url) {
+        throw new ApiError(400, "Error while uploading cover image")
         
     }
 
@@ -496,7 +487,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
      .json(
         new ApiResponse(
             200,
-            user[0].watchHistory,
+            user[0]?.watchedVideos || [],
             "Watched history fetched successfully"
         )
      )

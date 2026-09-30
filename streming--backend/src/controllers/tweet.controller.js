@@ -40,15 +40,7 @@ const createTweet = asyncHandler(async(req,res)=>{
 
 
 const getUserTweets = asyncHandler(async(req,res)=>{
-    // User ki ID lena — kis user ke tweets chahiye ye decide karna.
-    // Check karna user exist karta hai ya nahi, agar required ho.
-    // Us user ke tweets database se find karna.
-    // Required user/owner information populate karna, agar zarurat ho.
-    // Tweets ko desired order mein lana, usually newest first.
-    // Agar tweets nahi hain → empty array return karna.
-    //Tweets return karna.
-
-    const userId = req.user._id;
+    const userId = req.params.userId || req.user?._id;
 
     if(!userId){
         throw new ApiError(401, "User not found");
@@ -57,19 +49,15 @@ const getUserTweets = asyncHandler(async(req,res)=>{
     const tweets = await Tweet.find({
         owner: userId
     })
-    .populate("owner", "username avatar")
+    .populate("owner", "username avatar fullName")
     .sort({ createdAt: -1 });
-
-    if(tweets.length === 0){
-        throw new ApiError(404, "No tweets found");
-    }
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                tweets,
+                tweets || [],
                 "User tweets fetched successfully"
             )
         );

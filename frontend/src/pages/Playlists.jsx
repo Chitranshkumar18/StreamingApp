@@ -1,27 +1,102 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ListMusic, Plus, X } from "lucide-react";
 import PlaylistCard from "../components/PlaylistCard";
 import EmptyState from "../components/EmptyState";
+import { useAuth } from "../context/AuthContext";
+import { ENDPOINTS } from "../api/api";
 
-export default function Playlists({
-  playlists = [],
-  onCreatePlaylist,
-  onDeletePlaylist,
-  onEditPlaylist,
-}) {
+export default function Playlists() {
+  const { user } = useAuth();
+  const [playlists, setPlaylists] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  const handleCreate = (e) => {
+  const fetchPlaylists = async () => {
+    setIsLoading(true);
+    try {
+      const userId = user?._id || "me";
+      const res = await fetch(ENDPOINTS.PLAYLISTS.GET_USER_PLAYLISTS(userId), {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaylists(data?.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch playlists:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlaylists();
+  }, [user]);
+
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    if (onCreatePlaylist) {
-      onCreatePlaylist({ name, description });
+
+    try {
+      const res = await fetch(ENDPOINTS.PLAYLISTS.CREATE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data) {
+          setPlaylists((prev) => [data.data, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to create playlist:", err);
     }
+
     setName("");
     setDescription("");
     setShowModal(false);
+  };
+
+  const handleDeletePlaylist = async (playlistId) => {
+    if (!window.confirm("Are you sure you want to delete this playlist?")) return;
+    try {
+      const res = await fetch(ENDPOINTS.PLAYLISTS.DELETE(playlistId), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setPlaylists((prev) => prev.filter((p) => p._id !== playlistId));
+      }
+    } catch (err) {
+      console.error("Failed to delete playlist:", err);
+    }
+  };
+
+  const handleEditPlaylist = async (playlistId, updatedData) => {
+    try {
+      const res = await fetch(ENDPOINTS.PLAYLISTS.UPDATE(playlistId), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(updatedData),
+      });
+      if (res.ok) {
+        setPlaylists((prev) =>
+          prev.map((p) => (p._id === playlistId ? { ...p, ...updatedData } : p))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update playlist:", err);
+    }
   };
 
   return (
@@ -54,8 +129,8 @@ export default function Playlists({
             <PlaylistCard
               key={playlist._id}
               playlist={playlist}
-              onDelete={onDeletePlaylist}
-              onEdit={onEditPlaylist}
+              onDelete={handleDeletePlaylist}
+              onEdit={handleEditPlaylist}
             />
           ))}
         </div>

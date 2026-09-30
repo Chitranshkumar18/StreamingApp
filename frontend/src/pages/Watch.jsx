@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   ThumbsUp,
   Share2,
@@ -12,27 +12,112 @@ import {
 import CommentSection from "../components/CommentSection";
 import VideoCard from "../components/VideoCard";
 import { useAuth } from "../context/AuthContext";
+import { ENDPOINTS } from "../api/api";
 
-export default function Watch({ currentVideo, relatedVideos = [] }) {
+export default function Watch() {
+  const { videoId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
+  const [currentVideo, setCurrentVideo] = useState(null);
+  const [relatedVideos, setRelatedVideos] = useState([]);
+  const [comments, setComments] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Video details from prop or fallback
-  const title = currentVideo?.title || "Video Player Preview";
-  const videoSrc = currentVideo?.videoFile;
-  const thumbnail = currentVideo?.thumbnail;
-  const description = currentVideo?.description || "No description provided for this video.";
-  const views = currentVideo?.views !== undefined ? currentVideo.views : "--";
-  const createdAt = currentVideo?.createdAt ? new Date(currentVideo.createdAt).toLocaleDateString() : "--";
-  const ownerName = currentVideo?.owner?.fullName || currentVideo?.owner?.username || "Channel Creator";
-  const ownerAvatar = currentVideo?.owner?.avatar;
-  const ownerHandle = currentVideo?.owner?.username ? `@${currentVideo.owner.username}` : "@creator";
+  // Load video details and related videos
+  useEffect(() => {
+    if (!videoId) return;
+
+    const fetchVideoData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch current video
+        const videoRes = await fetch(ENDPOINTS.VIDEOS.GET_BY_ID(videoId), {
+          credentials: "include",
+        });
+        if (videoRes.ok) {
+          const videoData = await videoRes.json();
+          const vid = videoData?.data;
+          setCurrentVideo(vid);
+
+          // If authenticated and owner is available, check subscribed or liked
+          if (isAuthenticated && vid?.owner?._id) {
+            try {
+              const subRes = await fetch(
+                ENDPOINTS.SUBSCRIPTIONS.GET_SUBSCRIBED_CHANNELS(vid.owner._id),
+                { credentials: "include" }
+              );
+              if (subRes.ok) {
+                const subData = await subRes.json();
+                const isSub = (subData?.data || []).some(
+                  (s) =>
+                    s.channel?._id === vid.owner._id ||
+                    s.channel === vid.owner._id
+                );
+                setIsSubscribed(isSub);
+              }
+            } catch (e) {
+              // Ignore
+            }
+          }
+        }
+
+        // Fetch comments
+        const commentsRes = await fetch(
+          ENDPOINTS.COMMENTS.GET_VIDEO_COMMENTS(videoId),
+          {
+            credentials: "include",
+          }
+        );
+        if (commentsRes.ok) {
+          const commentsData = await commentsRes.json();
+          setComments(commentsData?.data || []);
+        }
+
+        // Fetch related videos
+        const relatedRes = await fetch(ENDPOINTS.VIDEOS.GET_ALL, {
+          credentials: "include",
+        });
+        if (relatedRes.ok) {
+          const relData = await relatedRes.json();
+          const allVids = Array.isArray(relData?.data)
+            ? relData.data
+            : relData?.data?.videos || [];
+          setRelatedVideos(allVids.filter((v) => v._id !== videoId));
+        }
+
+        // Check if video is liked if authenticated
+        if (isAuthenticated) {
+          try {
+            const likedRes = await fetch(ENDPOINTS.LIKES.GET_LIKED_VIDEOS, {
+              credentials: "include",
+            });
+            if (likedRes.ok) {
+              const likedData = await likedRes.json();
+              const likedList = likedData?.data || [];
+              const isVideoLiked = likedList.some(
+                (item) => (item.video?._id || item.video || item._id) === videoId
+              );
+              setIsLiked(isVideoLiked);
+            }
+          } catch (e) {
+            // Ignore
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load video details:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVideoData();
+  }, [videoId, isAuthenticated]);
 
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -40,20 +125,125 @@ export default function Watch({ currentVideo, relatedVideos = [] }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!isAuthenticated) {
       navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
       return;
     }
-    setIsSubscribed(!isSubscribed);
+    const channelId = currentVideo?.owner?._id || currentVideo?.owner;
+    if (!channelId) return;
+
+    try {
+      const res = await fetch(ENDPOINTS.SUBSCRIPTIONS.TOGGLE(channelId), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setIsSubscribed((prev) => !prev);
+      }
+    } catch (err) {
+      console.error("Failed to toggle subscription:", err);
+    }
   };
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!isAuthenticated) {
       navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
       return;
     }
-    setIsLiked(!isLiked);
+
+    try {
+      const res = await fetch(ENDPOINTS.LIKES.TOGGLE_VIDEO_LIKE(videoId), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setIsLiked((prev) => !prev);
+      }
+    } catch (err) {
+      console.error("Failed to toggle video like:", err);
+    }
+  };
+
+  const handleAddComment = async (content) => {
+    if (!content.trim()) return;
+    try {
+      const res = await fetch(ENDPOINTS.COMMENTS.ADD_COMMENT(videoId), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ content }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const newComment = json.data;
+        // ensure owner information is attached
+        if (!newComment.owner && user) {
+          newComment.owner = user;
+        }
+        setComments((prev) => [newComment, ...prev]);
+      }
+    } catch (err) {
+      console.error("Failed to add comment:", err);
+    }
+  };
+
+  const handleUpdateComment = async (commentId, content) => {
+    if (!content.trim()) return;
+    try {
+      const res = await fetch(ENDPOINTS.COMMENTS.UPDATE_COMMENT(commentId), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ content }),
+      });
+      if (res.ok) {
+        setComments((prev) =>
+          prev.map((c) => (c._id === commentId ? { ...c, content } : c))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update comment:", err);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const res = await fetch(ENDPOINTS.COMMENTS.DELETE_COMMENT(commentId), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setComments((prev) => prev.filter((c) => c._id !== commentId));
+      }
+    } catch (err) {
+      console.error("Failed to delete comment:", err);
+    }
+  };
+
+  const handleToggleCommentLike = async (commentId) => {
+    try {
+      const res = await fetch(ENDPOINTS.LIKES.TOGGLE_COMMENT_LIKE(commentId), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        // Increment or toggle like indicator
+        setComments((prev) =>
+          prev.map((c) =>
+            c._id === commentId
+              ? { ...c, likesCount: (c.likesCount || 0) + 1 }
+              : c
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle comment like:", err);
+    }
   };
 
   const handleSaveToPlaylist = (e) => {
@@ -62,6 +252,16 @@ export default function Watch({ currentVideo, relatedVideos = [] }) {
       navigate(`/login?redirect=${encodeURIComponent("/playlists")}`);
     }
   };
+
+  const title = currentVideo?.title || "Video Player";
+  const videoSrc = currentVideo?.videoFile;
+  const thumbnail = currentVideo?.thumbnail;
+  const description = currentVideo?.description || "No description provided for this video.";
+  const views = currentVideo?.views !== undefined ? currentVideo.views : "--";
+  const createdAt = currentVideo?.createdAt ? new Date(currentVideo.createdAt).toLocaleDateString() : "--";
+  const ownerName = currentVideo?.owner?.fullName || currentVideo?.owner?.username || "Channel Creator";
+  const ownerAvatar = currentVideo?.owner?.avatar;
+  const ownerHandle = currentVideo?.owner?.username ? `@${currentVideo.owner.username}` : "@creator";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-12">
@@ -82,10 +282,10 @@ export default function Watch({ currentVideo, relatedVideos = [] }) {
                 <Play className="w-8 h-8 fill-current ml-1" />
               </div>
               <p className="text-slate-200 font-semibold text-sm">
-                Video Player Ready
+                {isLoading ? "Loading stream..." : "Video not available"}
               </p>
               <p className="text-slate-500 text-xs mt-1">
-                Video stream and player controls ready for media playback
+                {isLoading ? "Please wait while the media stream loads" : "The requested video could not be loaded"}
               </p>
             </div>
           )}
@@ -196,7 +396,13 @@ export default function Watch({ currentVideo, relatedVideos = [] }) {
         </div>
 
         {/* Comments Section */}
-        <CommentSection />
+        <CommentSection
+          comments={comments}
+          onAddComment={handleAddComment}
+          onUpdateComment={handleUpdateComment}
+          onDeleteComment={handleDeleteComment}
+          onToggleLike={handleToggleCommentLike}
+        />
       </div>
 
       {/* Right Column: Up Next / Related Videos */}
@@ -208,14 +414,9 @@ export default function Watch({ currentVideo, relatedVideos = [] }) {
               <VideoCard key={video._id} video={video} variant="compact" />
             ))
           ) : (
-            Array.from({ length: 6 }).map((_, idx) => (
-              <VideoCard
-                key={`related-placeholder-${idx}`}
-                title="Up Next Stream"
-                category="Recommended"
-                variant="compact"
-              />
-            ))
+            <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400">
+              No related videos available
+            </div>
           )}
         </div>
       </div>

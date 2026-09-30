@@ -4,24 +4,10 @@ import { ApiError } from "../utils/ApiError.js";
 import { Playlist } from "../models/playlist.model.js";
 
 const createPlaylist = asyncHandler(async(req,res)=>{
-   // Request se playlist details lena:
-   // name
-   // description
-   // Logged-in user ki ID lena.
-   // Check karna name provided hai.
-   // Name empty hai ya nahi validate karna.
-   // Playlist create karna with:
-   // name
-   // description
-   // owner
-   // videos initially empty, if required by model.
-   // Check karna playlist successfully create hui hai.
-   // Created playlist return karna.
+    const { name, description = "" } = req.body;
 
-    const { name, description } = req.body;
-
-    if (!name || !description) {
-        throw new ApiError(400, "Name and description are required");
+    if (!name?.trim()) {
+        throw new ApiError(400, "Name is required");
     }
 
     const userId = req.user?._id;
@@ -31,8 +17,8 @@ const createPlaylist = asyncHandler(async(req,res)=>{
     }
 
     const playlist = await Playlist.create({
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim(),
         owner: userId
     });
 
@@ -56,15 +42,7 @@ const createPlaylist = asyncHandler(async(req,res)=>{
 
 
 const getUserPlaylists = asyncHandler(async(req,res)=>{
-    // Logged-in user ki ID lena.
-    // Check karna user authenticated hai.
-    // Database se current user ki playlists find karna.
-    // Required related information populate karna, if needed.
-    // Playlists ko required order mein sort karna.
-    // Check karna playlists mili hain ya nahi.
-    // User ki playlists return karna.
-
-    const userId = req.user?._id;
+    const userId = req.params.userId || req.user?._id;
 
     if(!userId){
         throw new ApiError(400, "User ID is required");
@@ -72,18 +50,14 @@ const getUserPlaylists = asyncHandler(async(req,res)=>{
 
     const playlist = await Playlist.find({
         owner: userId
-    })
-
-    if(playlist.length === 0){
-        throw new ApiError(200, "playlist not exist")
-    }
+    }).populate("videos");
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                playlist,
+                playlist || [],
                 "Playlist fetched successfully"
             )
         )
@@ -93,15 +67,6 @@ const getUserPlaylists = asyncHandler(async(req,res)=>{
 
 
 const getPlaylistById = asyncHandler(async(req,res)=>{
-   // playlistId lena.
-   // Check karna playlistId provided hai.
-   // Playlist database se find karna.
-   // Check karna playlist exist karti hai ya nahi.
-   // Required related information populate karna:
-   // owner
-   // videos
-   // Playlist return karna.
-
     const { playlistId } = req.params;
 
     if (!playlistId) {
@@ -109,8 +74,14 @@ const getPlaylistById = asyncHandler(async(req,res)=>{
     }
 
     const playlist = await Playlist.findById(playlistId)
-        .populate("owner")
-        .populate("videos");
+        .populate("owner", "username avatar fullName")
+        .populate({
+            path: "videos",
+            populate: {
+                path: "owner",
+                select: "username avatar fullName"
+            }
+        });
 
     if (!playlist) {
         throw new ApiError(404, "Playlist not found");
@@ -129,26 +100,12 @@ const getPlaylistById = asyncHandler(async(req,res)=>{
 
 
 const addVideoToPlaylist = asyncHandler(async(req,res)=>{
-   // playlistId lena.
-   // videoId lena.
-   // Check karna dono IDs provided hain.
-   // Playlist database se find karna.
-   // Check karna playlist exist karti hai ya nahi.
-   // Check karna logged-in user playlist ka owner hai.
-   // Video database se find karna.
-   // Check karna video exist karta hai ya nahi.
-   // Check karna video already playlist mein hai ya nahi.
-   // Agar already hai → error return karna.
-   // Video ID ko playlist ke videos array mein add karna.
-   // Playlist save karna.
-   // Updated playlist return karna.
-
-   const {playlistId} = req.params
+   const playlistId = req.params.playlistId || req.body.playlistId;
    if(!playlistId){
     throw new ApiError(400, "playlist ID is required")
    }
 
-   const {videoId} = req.body
+   const videoId = req.params.videoId || req.body.videoId;
    if(!videoId){
     throw new ApiError(400, "video ID is required")
    }
@@ -205,25 +162,9 @@ const addVideoToPlaylist = asyncHandler(async(req,res)=>{
 
 
 const removeVideoFromPlaylist = asyncHandler(async(req,res)=>{
-    // playlistId lena.
-    // videoId lena.
-    // Check karna dono IDs provided hain.
-    // Playlist database se find karna.
-    // Check karna playlist exist karti hai ya nahi.
-    // Check karna logged-in user playlist ka owner hai.
-    // Check karna video playlist mein exist karta hai ya nahi.
-    // Agar video playlist mein nahi hai → error return karna.
-    // Video ID ko playlist ke videos array se remove karna.
-    // Playlist save karna.
-    // Updated playlist return karna.
+    const playlistId = req.params.playlistId || req.body.playlistId;
+    const videoId = req.params.videoId || req.body.videoId;
 
-    // 1. playlistId lena.
-    const { playlistId } = req.params;
-
-    // 2. videoId lena.
-    const { videoId } = req.body;
-
-    // 3. Check karna dono IDs provided hain.
     if (!playlistId) {
         throw new ApiError(400, "Playlist id is required");
     }
@@ -232,15 +173,12 @@ const removeVideoFromPlaylist = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Video id is required");
     }
 
-    // 4. Playlist database se find karna.
     const playlist = await Playlist.findById(playlistId);
 
-    // 5. Check karna playlist exist karti hai ya nahi.
     if (!playlist) {
         throw new ApiError(404, "Playlist not found");
     }
 
-    // 6. Check karna logged-in user playlist ka owner hai.
     if (req.user?._id.toString() !== playlist.owner.toString()) {
         throw new ApiError(
             403,
@@ -248,18 +186,14 @@ const removeVideoFromPlaylist = asyncHandler(async(req,res)=>{
         );
     }
 
-    // 7. Check karna video playlist mein exist karta hai ya nahi.
     if (!playlist.videos.includes(videoId)) {
         throw new ApiError(400, "Video not found in playlist");
     }
 
-    // 8. Video ID ko playlist ke videos array se remove karna.
     playlist.videos.pull(videoId);
 
-    // 9. Playlist save karna.
     await playlist.save();
 
-    // 10. Updated playlist return karna.
     return res
         .status(200)
         .json(

@@ -131,12 +131,12 @@ const toggleCommentLike = asyncHandler(async(req,res)=>{
             );
     }
 
-    const Like = await Like.create({
+    const like = await Like.create({
         comment: commentId,
         likeBy: userId
     })
 
-    if(!Like){
+    if(!like){
         throw new ApiError(500, "Failed to like comment");
     }
     return res
@@ -144,7 +144,7 @@ const toggleCommentLike = asyncHandler(async(req,res)=>{
     .json(
         new ApiResponse(
             201,
-            Like,
+            like,
             "comment liked successfully"
         )
     );    
@@ -183,7 +183,7 @@ const toggleTweetLike = asyncHandler(async(req,res)=>{
     })
 
     if(existingLike){
-        await Tweet.findByIdAndDelete(existingLike._id)
+        await Like.findByIdAndDelete(existingLike._id)
 
         return res
         .status(200)
@@ -235,7 +235,13 @@ const getLikedVideos = asyncHandler(async(req,res)=>{
     const likedVideos = await Like.find({
         likeBy : userId,
         video: { $exists: true }
-    }).populate("video");
+    }).populate({
+        path: "video",
+        populate: {
+            path: "owner",
+            select: "username avatar fullName"
+        }
+    });
 
     if(likedVideos.length === 0){
        return res

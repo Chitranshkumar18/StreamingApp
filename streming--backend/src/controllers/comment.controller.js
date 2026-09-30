@@ -55,10 +55,19 @@ const getVideoComments = asyncHandler(async(req,res)=>{
     }
 
     const videocomment = await Comment.find({ video: videoId })
-    .populate("owner", "username avatar");
+    .populate("owner", "username avatar fullName")
+    .sort({ createdAt: -1 });
 
     if(videocomment.length === 0){
-        throw new ApiError(400, "comment not found")
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(
+                  200,
+                  [],
+                  "No comments found"
+              )
+          );
     }
 
     return res

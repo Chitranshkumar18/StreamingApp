@@ -1,27 +1,100 @@
-import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ListMusic, Play, Trash2, Edit, ArrowLeft } from "lucide-react";
 import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
-export default function PlaylistDetails({
-  playlist,
-  onRemoveVideo,
-  onDeletePlaylist,
-  onUpdatePlaylist,
-}) {
+export default function PlaylistDetails() {
   const { playlistId } = useParams();
+  const navigate = useNavigate();
+  const [playlist, setPlaylist] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(playlist?.name || "Playlist Name");
-  const [description, setDescription] = useState(playlist?.description || "Playlist Description");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
 
-  const videos = playlist?.videos || [];
+  const fetchPlaylist = async () => {
+    if (!playlistId) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(ENDPOINTS.PLAYLISTS.GET_BY_ID(playlistId), {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const pl = data?.data;
+        setPlaylist(pl);
+        setName(pl?.name || "");
+        setDescription(pl?.description || "");
+      }
+    } catch (err) {
+      console.error("Failed to load playlist:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    fetchPlaylist();
+  }, [playlistId]);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (onUpdatePlaylist) {
-      onUpdatePlaylist(playlistId, { name, description });
+    try {
+      const res = await fetch(ENDPOINTS.PLAYLISTS.UPDATE(playlistId), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ name, description }),
+      });
+      if (res.ok) {
+        setPlaylist((prev) => (prev ? { ...prev, name, description } : prev));
+      }
+    } catch (err) {
+      console.error("Failed to update playlist:", err);
     }
     setIsEditing(false);
+  };
+
+  const handleDeletePlaylist = async () => {
+    if (!window.confirm("Are you sure you want to delete this playlist?")) return;
+    try {
+      const res = await fetch(ENDPOINTS.PLAYLISTS.DELETE(playlistId), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        navigate("/playlists");
+      }
+    } catch (err) {
+      console.error("Failed to delete playlist:", err);
+    }
+  };
+
+  const handleRemoveVideo = async (videoId) => {
+    try {
+      const res = await fetch(
+        ENDPOINTS.PLAYLISTS.REMOVE_VIDEO(videoId, playlistId),
+        {
+          method: "PATCH",
+          credentials: "include",
+        }
+      );
+      if (res.ok) {
+        setPlaylist((prev) =>
+          prev
+            ? {
+                ...prev,
+                videos: (prev.videos || []).filter((v) => v._id !== videoId),
+              }
+            : prev
+        );
+      }
+    } catch (err) {
+      console.error("Failed to remove video from playlist:", err);
+    }
   };
 
   return (
@@ -113,7 +186,7 @@ export default function PlaylistDetails({
             </button>
 
             <button
-              onClick={() => onDeletePlaylist && onDeletePlaylist(playlistId)}
+              onClick={handleDeletePlaylist}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/20 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -165,7 +238,7 @@ export default function PlaylistDetails({
                 </div>
 
                 <button
-                  onClick={() => onRemoveVideo && onRemoveVideo(video._id, playlistId)}
+                  onClick={() => handleRemoveVideo(video._id)}
                   className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                   title="Remove from playlist"
                 >

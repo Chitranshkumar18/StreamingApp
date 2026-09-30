@@ -71,7 +71,23 @@ const getAllVideos = asyncHandler(async(req,res)=>{
         .limit(limitNumber);
 
     if (videos.length === 0) {
-        throw new ApiError(404, "No videos found");
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    {
+                        videos: [],
+                        pagination: {
+                            currentPage: pageNumber,
+                            limit: limitNumber,
+                            totalVideos: 0,
+                            totalPages: 0
+                        }
+                    },
+                    "No videos found"
+                )
+            );
     }
 
     // Total videos
@@ -133,7 +149,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const {
         title,
         description,
-        duration
+        duration = 0
     } = req.body;
 
     // 2. Logged-in user ki ID lena
@@ -142,12 +158,11 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // 3. Check karna required fields available hain
     if (
         !title?.trim() ||
-        !description?.trim() ||
-        duration === undefined
+        !description?.trim()
     ) {
         throw new ApiError(
             400,
-            "Title, description and duration are required"
+            "Title and description are required"
         );
     }
 

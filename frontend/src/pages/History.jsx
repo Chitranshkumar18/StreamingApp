@@ -1,9 +1,37 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Clock, Trash2 } from "lucide-react";
 import VideoCard from "../components/VideoCard";
 import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
-export default function History({ historyVideos = [], onClearHistory }) {
+export default function History() {
+  const [historyVideos, setHistoryVideos] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchHistory = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(ENDPOINTS.AUTH.WATCH_HISTORY, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryVideos(data?.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const handleClearHistory = () => {
+    setHistoryVideos([]);
+  };
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -20,7 +48,7 @@ export default function History({ historyVideos = [], onClearHistory }) {
 
         {historyVideos.length > 0 && (
           <button
-            onClick={onClearHistory}
+            onClick={handleClearHistory}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />

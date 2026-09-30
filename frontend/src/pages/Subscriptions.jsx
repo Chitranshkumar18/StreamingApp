@@ -1,9 +1,58 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Tv, UserCheck, Bell } from "lucide-react";
 import EmptyState from "../components/EmptyState";
+import { useAuth } from "../context/AuthContext";
+import { ENDPOINTS } from "../api/api";
 
-export default function Subscriptions({ subscriptions = [], onToggleSubscription }) {
+export default function Subscriptions() {
+  const { user } = useAuth();
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSubscriptions = async () => {
+    setIsLoading(true);
+    try {
+      const channelId = user?._id || "me";
+      const res = await fetch(
+        ENDPOINTS.SUBSCRIPTIONS.GET_SUBSCRIBED_CHANNELS(channelId),
+        {
+          credentials: "include",
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setSubscriptions(data?.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch subscriptions:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [user]);
+
+  const handleToggleSubscription = async (channelId) => {
+    try {
+      const res = await fetch(ENDPOINTS.SUBSCRIPTIONS.TOGGLE(channelId), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setSubscriptions((prev) =>
+          prev.filter((sub) => {
+            const id = sub.channel?._id || sub.channel || sub._id;
+            return id !== channelId;
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle subscription:", err);
+    }
+  };
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -57,7 +106,7 @@ export default function Subscriptions({ subscriptions = [], onToggleSubscription
                   </Link>
 
                   <button
-                    onClick={() => onToggleSubscription && onToggleSubscription(channel._id)}
+                    onClick={() => handleToggleSubscription(channel._id)}
                     className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-indigo-400 hover:text-indigo-300 text-xs font-medium border border-indigo-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
                     title="Subscribed"
                   >

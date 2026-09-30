@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -10,13 +10,45 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import EmptyState from "../components/EmptyState";
+import { ENDPOINTS } from "../api/api";
 
-export default function Dashboard({ stats, videos = [] }) {
-  // Use '--' as placeholder when stats are not provided from backend yet
-  const totalVideos = stats?.totalVideos !== undefined ? stats.totalVideos : "--";
-  const totalViews = stats?.totalViews !== undefined ? stats.totalViews : "--";
-  const totalSubscribers = stats?.totalSubscribers !== undefined ? stats.totalSubscribers : "--";
-  const totalLikes = stats?.totalLikes !== undefined ? stats.totalLikes : "--";
+export default function Dashboard() {
+  const [stats, setStats] = useState(null);
+  const [videos, setVideos] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [statsRes, videosRes] = await Promise.all([
+          fetch(ENDPOINTS.DASHBOARD.GET_STATS, { credentials: "include" }),
+          fetch(ENDPOINTS.DASHBOARD.GET_VIDEOS, { credentials: "include" }),
+        ]);
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData?.data || null);
+        }
+
+        if (videosRes.ok) {
+          const videosData = await videosRes.json();
+          setVideos(videosData?.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const totalVideos = stats?.totalVideos !== undefined ? stats.totalVideos : (isLoading ? "--" : 0);
+  const totalViews = stats?.totalViews !== undefined ? stats.totalViews : (isLoading ? "--" : 0);
+  const totalSubscribers = stats?.totalSubscribers !== undefined ? stats.totalSubscribers : (isLoading ? "--" : 0);
+  const totalLikes = stats?.totalLikes !== undefined ? stats.totalLikes : (isLoading ? "--" : 0);
 
   const statCards = [
     {

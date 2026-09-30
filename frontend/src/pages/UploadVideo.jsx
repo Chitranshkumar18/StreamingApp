@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Upload, Film, Image, Check, AlertCircle, ArrowLeft } from "lucide-react";
+import { ENDPOINTS } from "../api/api";
 
 export default function UploadVideo() {
   const [videoFile, setVideoFile] = useState(null);
@@ -9,14 +10,45 @@ export default function UploadVideo() {
   const [description, setDescription] = useState("");
   const [isPublished, setIsPublished] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Frontend UI only - Ready for manual backend connection
+    if (!videoFile || !thumbnailFile || !title.trim() || !description.trim()) {
+      setError("Please provide all required fields including video file and thumbnail.");
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("videoFile", videoFile);
+      formData.append("thumbnail", thumbnailFile);
+      formData.append("title", title.trim());
+      formData.append("description", description.trim());
+      formData.append("isPublished", isPublished);
+
+      const res = await fetch(ENDPOINTS.VIDEOS.PUBLISH, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (res.ok) {
+        navigate("/my-uploads");
+      } else {
+        const errJson = await res.json().catch(() => null);
+        setError(errJson?.message || "Failed to upload video. Please try again.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Connection error while uploading video. Please check your network.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -44,6 +76,14 @@ export default function UploadVideo() {
           </div>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Upload Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
