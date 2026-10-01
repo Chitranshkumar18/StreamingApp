@@ -66,7 +66,7 @@ export default function LikedVideos() {
           title="No liked videos yet"
           description="Click the thumbs-up button on any video to save it here for quick access."
           actionText="Discover Videos"
-          actionLink="/browse"
+          actionLink="/"
         />
       )}
     </div>

@@ -145,11 +145,12 @@ const publishAVideo = asyncHandler(async (req, res) => {
         // Created video return karna.
 
     // 1. Request se video details lena:
-    // videoFile, thumbnail, title, description, duration
+    // videoFile, thumbnail, title, description, duration, isPublished
     const {
         title,
         description,
-        duration = 0
+        duration = 0,
+        isPublished
     } = req.body;
 
     // 2. Logged-in user ki ID lena
@@ -198,15 +199,21 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const videoFileUrl = videoFile.secure_url;
     const thumbnailUrl = thumbnail.secure_url;
 
+    // Parse isPublished status (defaulting to true for published videos)
+    const publishedStatus = isPublished !== undefined
+        ? (isPublished === true || isPublished === "true" || isPublished === 1 || isPublished === "1")
+        : true;
+
     // 9. Video document create karna with:
     // title, description, videoFile URL,
-    // thumbnail URL, owner, duration
+    // thumbnail URL, owner, duration, isPublished
     const video = await Video.create({
         videoFile: videoFileUrl,
         thumbnail: thumbnailUrl,
         title: title.trim(),
         description: description.trim(),
-        duration: Number(duration),
+        duration: Number(duration) || 0,
+        isPublished: publishedStatus,
         owner: userId
     });
 

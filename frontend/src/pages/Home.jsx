@@ -80,13 +80,6 @@ export default function Home() {
               Trending Now
             </h2>
           </div>
-          <Link
-            to="/browse?tab=trending"
-            className="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
-          >
-            <span>See All</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
         </div>
 
         {/* 5-column Video Grid */}
@@ -167,13 +160,6 @@ export default function Home() {
                 Featured Streams
               </h2>
             </div>
-            <Link
-              to="/browse"
-              className="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
-            >
-              <span>Explore All</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">

@@ -26,6 +26,7 @@ export const ENDPOINTS = {
     UPDATE_COVER_IMAGE: `${API_BASE_URL}/users/cover-image`,
     USER_CHANNEL_PROFILE: (username) => `${API_BASE_URL}/users/c/${username}`,
     WATCH_HISTORY: `${API_BASE_URL}/users/history`,
+    ADD_TO_WATCH_HISTORY: (videoId) => `${API_BASE_URL}/users/history/${videoId}`,
   },
 
   // Video routes

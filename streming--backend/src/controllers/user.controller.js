@@ -3,6 +3,7 @@ import { ApiError} from "../utils/ApiError.js"
 import { ApiResponse} from "../utils/ApiResponse.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {User} from "../models/user.model.js"
+import {Video} from "../models/video.model.js"
 import mongoose from "mongoose"
 import jwt from "jsonwebtoken"
 
@@ -493,6 +494,43 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
      )
 })
 
+const addToWatchHistory = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+        throw new ApiError(400, "Invalid or missing videoId");
+    }
+
+    const video = await Video.findById(videoId);
+    if (!video) {
+        throw new ApiError(404, "Video not found");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $addToSet: {
+                watchHistory: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        { new: true }
+    );
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user.watchHistory,
+                "Video added to watch history successfully"
+            )
+        );
+});
+
 
 export {
     registerUser,
@@ -505,6 +543,6 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
-    
+    getWatchHistory,
+    addToWatchHistory
 }

@@ -7,7 +7,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import Home from "./pages/Home";
-import Browse from "./pages/Browse";
 import Search from "./pages/Search";
 import Watch from "./pages/Watch";
 import History from "./pages/History";
@@ -55,7 +54,6 @@ export default function App() {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Home />} />
-                <Route path="/browse" element={<Browse />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/watch/:videoId" element={<Watch />} />
                 <Route path="/login" element={<Login />} />

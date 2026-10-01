@@ -253,7 +253,7 @@ export default function PlaylistDetails() {
             title="Playlist is empty"
             description="No videos have been added to this playlist yet. Add videos while watching to build your collection."
             actionText="Discover Videos"
-            actionLink="/browse"
+            actionLink="/"
           />
         )}
       </div>

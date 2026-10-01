@@ -45,6 +45,18 @@ export default function Watch() {
           const vid = videoData?.data;
           setCurrentVideo(vid);
 
+          // If authenticated, add video to watch history
+          if (isAuthenticated) {
+            try {
+              await fetch(ENDPOINTS.AUTH.ADD_TO_WATCH_HISTORY(videoId), {
+                method: "POST",
+                credentials: "include",
+              });
+            } catch (err) {
+              console.error("Failed to add to watch history:", err);
+            }
+          }
+
           // If authenticated and owner is available, check subscribed or liked
           if (isAuthenticated && vid?.owner?._id) {
             try {

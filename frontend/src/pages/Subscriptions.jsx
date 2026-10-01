@@ -124,7 +124,7 @@ export default function Subscriptions() {
           title="No subscriptions yet"
           description="Subscribe to your favorite creators to stay updated with their latest uploads."
           actionText="Discover Creators"
-          actionLink="/browse"
+          actionLink="/"
         />
       )}
     </div>
