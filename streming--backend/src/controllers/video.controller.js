@@ -150,7 +150,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         title,
         description,
         duration = 0,
-        isPublished
+        isPublished= true
     } = req.body;
 
     // 2. Logged-in user ki ID lena
