@@ -151,7 +151,7 @@ export default function Home() {
       )}
 
       {/* Section 4: Recommended Streams (Public Discovery) */}
-      {videos.length > 5 && (
+      {/* {videos.length > 5 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function Home() {
             ))}
           </div>
         </section>
-      )}
+      )} */}
     </div>
   );
 }
