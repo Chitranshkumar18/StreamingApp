@@ -17,6 +17,8 @@ import { ENDPOINTS } from "../api/api";
 export default function MyUploads() {
   const [videos, setVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState("");
   const [editingVideo, setEditingVideo] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -61,17 +63,33 @@ export default function MyUploads() {
   };
 
   const handleDeleteVideo = async (videoId) => {
+    if (deletingId) return;
     if (!window.confirm("Are you sure you want to delete this video?")) return;
+
+    setDeletingId(videoId);
+    setError("");
+
     try {
       const res = await fetch(ENDPOINTS.VIDEOS.DELETE(videoId), {
         method: "DELETE",
         credentials: "include",
       });
+      const data = await res.json().catch(() => null);
+
       if (res.ok) {
         setVideos((prev) => prev.filter((v) => v._id !== videoId));
+      } else {
+        const errorMsg = data?.message || "Failed to delete video. Please try again.";
+        setError(errorMsg);
+        alert(errorMsg);
       }
     } catch (err) {
       console.error("Failed to delete video:", err);
+      const errorMsg = "An error occurred while deleting the video. Please check your network and try again.";
+      setError(errorMsg);
+      alert(errorMsg);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -130,6 +148,19 @@ export default function MyUploads() {
           <span>Upload Video</span>
         </Link>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={() => setError("")}
+            className="text-rose-400 hover:text-rose-300 font-bold ml-2 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Videos List */}
       {videos.length > 0 ? (
@@ -213,8 +244,11 @@ export default function MyUploads() {
 
                 {/* Delete Button */}
                 <button
-                  onClick={() => onDeleteVideo && onDeleteVideo(video._id)}
-                  className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                  onClick={() => handleDeleteVideo(video._id)}
+                  disabled={Boolean(deletingId)}
+                  className={`p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors ${
+                    deletingId === video._id ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  }`}
                   title="Delete video"
                 >
                   <Trash2 className="w-4 h-4" />

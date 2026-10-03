@@ -1,8 +1,9 @@
+import { isValidObjectId } from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 
 const getAllVideos = asyncHandler(async(req,res)=>{
@@ -198,6 +199,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // 8. Upload ke baad returned URLs lena
     const videoFileUrl = videoFile.secure_url;
     const thumbnailUrl = thumbnail.secure_url;
+    const videoFilePublicId = videoFile.public_id;
+    const thumbnailPublicId = thumbnail.public_id;
 
     // Parse isPublished status (defaulting to true for published videos)
     const publishedStatus = isPublished !== undefined
@@ -210,6 +213,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const video = await Video.create({
         videoFile: videoFileUrl,
         thumbnail: thumbnailUrl,
+        videoFilePublicId: videoFilePublicId,
+        thumbnailPublicId: thumbnailPublicId,
         title: title.trim(),
         description: description.trim(),
         duration: Number(duration) || 0,
@@ -391,24 +396,11 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 
 const deleteVideo = asyncHandler(async (req, res) => {
-
-    // videoId lena.
-    // Video find karna.
-    // Check karna video exist karta hai ya nahi.
-    // Check karna logged-in user owner hai.
-    // Video database se delete karna.
-    // Associated cloud files identify karna:
-    // video file
-    // thumbnail
-    // Cloud storage se associated files delete karna.
-    // Delete successful hua ya nahi verify karna.
-    // Success response return karna.
-
     // 1. videoId lena
     const { videoId } = req.params;
 
-    if (!videoId) {
-        throw new ApiError(400, "videoId is required");
+    if (!videoId?.trim() || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video ID");
     }
 
     // 2. Video find karna
@@ -427,36 +419,36 @@ const deleteVideo = asyncHandler(async (req, res) => {
         );
     }
 
-    // 5. Video database se delete karna
+    // 5. Cloud storage se associated files delete karna:
+    //    - Video file
+    const videoFileIdentifier = video.videoFilePublicId || video.videoFile;
+    if (videoFileIdentifier) {
+        const videoDeleteResponse = await deleteFromCloudinary(videoFileIdentifier, "video");
+        if (!videoDeleteResponse || (videoDeleteResponse.result !== "ok" && videoDeleteResponse.result !== "not found")) {
+            throw new ApiError(500, "Failed to delete video file from cloud storage");
+        }
+    }
+
+    //    - Thumbnail
+    const thumbnailIdentifier = video.thumbnailPublicId || video.thumbnail;
+    if (thumbnailIdentifier) {
+        const thumbnailDeleteResponse = await deleteFromCloudinary(thumbnailIdentifier, "image");
+        if (!thumbnailDeleteResponse || (thumbnailDeleteResponse.result !== "ok" && thumbnailDeleteResponse.result !== "not found")) {
+            throw new ApiError(500, "Failed to delete thumbnail from cloud storage");
+        }
+    }
+
+    // 6. Video database se delete karna
     const deletedVideo = await Video.findByIdAndDelete(videoId);
 
     if (!deletedVideo) {
         throw new ApiError(
             500,
-            "Failed to delete video"
+            "Failed to delete video from database"
         );
     }
 
-    // 6. Associated cloud files identify karna:
-    //    - video file
-    //    - thumbnail
-
-    // 7. Cloud storage se associated files delete karna
-    // Cloudinary public_id store nahi ho raha hai,
-    // isliye current model ke saath exact Cloudinary
-    // deletion yahan directly possible nahi hai.
-
-    // 8. Delete successful hua ya nahi verify karna
-    const deletedCheck = await Video.findById(videoId);
-
-    if (deletedCheck) {
-        throw new ApiError(
-            500,
-            "Video deletion verification failed"
-        );
-    }
-
-    // 9. Success response return karna
+    // 7. Success response return karna
     return res
         .status(200)
         .json(
