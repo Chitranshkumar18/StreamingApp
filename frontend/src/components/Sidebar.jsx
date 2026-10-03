@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronRight,
   MessageSquare,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -141,8 +142,20 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Bottom Section: Settings */}
+        {/* Bottom Section: Creator Dashboard & Settings */}
         <div className="p-4 border-t border-slate-800/80 space-y-1 shrink-0 bg-[#080c16]">
+          <Link
+            to="/dashboard"
+            onClick={(e) => handleNavClick(e, "/dashboard", false)}
+            className={`flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-medium transition-colors ${
+              isActive("/dashboard")
+                ? "bg-slate-800 text-indigo-400"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Creator Dashboard</span>
+          </Link>
           <Link
             to="/settings"
             onClick={(e) => handleNavClick(e, "/settings", false)}
