@@ -124,7 +124,7 @@ export default function Home() {
       )}
 
       {/* Section 3: Liked Videos (Only for Authenticated Users with Liked Videos) */}
-      {isAuthenticated && likedVideos.length > 0 && (
+      {/* {isAuthenticated && likedVideos.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export default function Home() {
             ))}
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Section 4: Recommended Streams (Public Discovery) */}
       {/* {videos.length > 5 && (
