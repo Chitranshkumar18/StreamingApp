@@ -16,16 +16,50 @@ export default function Home() {
     const fetchHomeData = async () => {
       setIsLoading(true);
       try {
-        // Fetch public videos
+        // Fetch public videos (fetch all pages)
         const res = await fetch(ENDPOINTS.VIDEOS.GET_ALL, {
           credentials: "include",
         });
         if (res.ok) {
           const data = await res.json();
-          const videoList = Array.isArray(data?.data)
+          let allVideos = Array.isArray(data?.data)
             ? data.data
             : data?.data?.videos || [];
-          setVideos(videoList);
+
+          const totalPages = data?.data?.pagination?.totalPages || 1;
+          if (totalPages > 1) {
+            const pagePromises = [];
+            for (let page = 2; page <= totalPages; page++) {
+              pagePromises.push(
+                fetch(`${ENDPOINTS.VIDEOS.GET_ALL}?page=${page}`, {
+                  credentials: "include",
+                }).then(async (pageRes) => {
+                  if (pageRes.ok) {
+                    const pageData = await pageRes.json();
+                    return Array.isArray(pageData?.data)
+                      ? pageData.data
+                      : pageData?.data?.videos || [];
+                  }
+                  return [];
+                })
+              );
+            }
+            const remainingPages = await Promise.all(pagePromises);
+            for (const pageVideos of remainingPages) {
+              allVideos = allVideos.concat(pageVideos);
+            }
+          }
+
+          // Deduplicate videos by _id while maintaining order
+          const seenIds = new Set();
+          const uniqueVideos = allVideos.filter((video) => {
+            if (!video?._id) return true;
+            if (seenIds.has(video._id)) return false;
+            seenIds.add(video._id);
+            return true;
+          });
+
+          setVideos(uniqueVideos);
         }
 
         // If authenticated, fetch history & liked videos
@@ -85,7 +119,7 @@ export default function Home() {
         {/* 5-column Video Grid */}
         {videos.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {videos.slice(0, 10).map((video) => (
+            {videos.map((video) => (
               <VideoCard key={video._id} video={video} />
             ))}
           </div>
