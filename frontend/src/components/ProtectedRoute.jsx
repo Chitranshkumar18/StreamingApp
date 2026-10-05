@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children }) {
 
   const isAuthLoading = isLoading || loading;
 
-  if (isAuthLoading) {
+  if (isAuthLoading) {   // -->> remove or stay??
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader size="lg" text="Verifying authentication..." />
