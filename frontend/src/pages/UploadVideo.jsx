@@ -24,8 +24,9 @@ export default function UploadVideo() {
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("videoFile", videoFile);
+      const formData = new FormData();  // Video and images are binary files.
+                                        // You can't send them as normal JSON. so use FormData()
+      formData.append("videoFile", videoFile); 
       formData.append("thumbnail", thumbnailFile);
       formData.append("title", title.trim());
       formData.append("description", description.trim());
