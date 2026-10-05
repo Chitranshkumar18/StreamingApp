@@ -61,7 +61,7 @@ userSchema.methods.ispasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password)
 }
 
-userSchema.methods.generateAccessToken = function(){
+userSchema.methods.generateAccessToken = function(){ // Access token ----->>>Used for normal authenticated requests.(short-lived permission)
     return jwt.sign(
         {
             _id: this._id,
@@ -76,7 +76,7 @@ userSchema.methods.generateAccessToken = function(){
     )
 }
 
-userSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateRefreshToken = function(){ // Refresh token ----->>>Used to obtain a new access token after the access token expires.(long-lived permission)
     return jwt.sign(
         {
             _id: this._id,

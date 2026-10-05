@@ -38,7 +38,7 @@ const videoSchema = new Schema(
             default: false,
         },
         owner:{
-            type: Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,   //This is a MongoDB reference.
             ref: "User"
         }     
 
