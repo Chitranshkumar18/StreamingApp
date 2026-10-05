@@ -12,7 +12,7 @@ export const API_BASE_URL =
     ? "/api/v1"
     : "https://streamingapp-6adv.onrender.com/api/v1";
 
-export const ENDPOINTS = {
+export const ENDPOINTS = {       // “I centralized API endpoints so changing the backend base URL doesn't require modifying every component.”
   // Auth & User routes
   AUTH: {
     REGISTER: `${API_BASE_URL}/users/register`,
