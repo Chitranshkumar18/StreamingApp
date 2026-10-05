@@ -176,7 +176,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     }
 
     // 5. Thumbnail available hai ya nahi check karna
-    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+    const thumbnailLocalPath = req.file?.path; // change into array  req.files?.thumbnail?.[0]?.path
 
     if (!thumbnailLocalPath) {
         throw new ApiError(400, "Thumbnail is required");
