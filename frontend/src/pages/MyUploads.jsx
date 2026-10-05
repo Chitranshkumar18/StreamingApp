@@ -213,7 +213,7 @@ export default function MyUploads() {
               <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
                 {/* Publish Toggle */}
                 <button
-                  onClick={() => onTogglePublish && onTogglePublish(video._id)}
+                  onClick={() => handleTogglePublish(video._id)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
                     video.isPublished
                       ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
