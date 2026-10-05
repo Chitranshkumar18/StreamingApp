@@ -509,7 +509,7 @@ const addToWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user._id,
         {
-            $addToSet: {
+            $addToSet: { // we are useing assToSet instense of the push because we don't want to add duplicate videos in the watch history 
                 watchHistory: new mongoose.Types.ObjectId(videoId)
             }
         },

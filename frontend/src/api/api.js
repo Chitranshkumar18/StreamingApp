@@ -38,6 +38,7 @@ export const ENDPOINTS = {       // “I centralized API endpoints so changing t
     UPDATE: (videoId) => `${API_BASE_URL}/videos/${videoId}`,
     DELETE: (videoId) => `${API_BASE_URL}/videos/${videoId}`,
     TOGGLE_PUBLISH: (videoId) => `${API_BASE_URL}/videos/toggle/publish/${videoId}`,
+    INCREMENT_VIEWS: (videoId) => `${API_BASE_URL}/videos/views/${videoId}`,
   },
 
   // Comments

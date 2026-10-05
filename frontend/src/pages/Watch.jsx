@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   ThumbsUp,
@@ -28,6 +28,8 @@ export default function Watch() {
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const hasCountedView = useRef(false);
+  
 
   // Load video details and related videos
   useEffect(() => {
@@ -130,6 +132,30 @@ export default function Watch() {
 
     fetchVideoData();
   }, [videoId, isAuthenticated]);
+
+
+
+
+
+  const handleVideoPlay = async () => {
+  if (hasCountedView.current) return;
+
+  hasCountedView.current = true;
+
+  try {
+    await fetch(ENDPOINTS.VIDEOS.INCREMENT_VIEWS(videoId), {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (err) {
+    hasCountedView.current = false;
+    console.error("Failed to count video view:", err);
+  }
+};
+
+
+
+
 
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -286,6 +312,7 @@ export default function Watch() {
               src={videoSrc}
               poster={thumbnail}
               controls
+              onPlay={handleVideoPlay}
               className="w-full h-full object-contain"
             />
           ) : (
