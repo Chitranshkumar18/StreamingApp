@@ -137,16 +137,32 @@ export default function Watch() {
 
 
 
-  const handleVideoPlay = async () => {
+const handleVideoPlay = async () => {
   if (hasCountedView.current) return;
 
   hasCountedView.current = true;
 
   try {
-    await fetch(ENDPOINTS.VIDEOS.INCREMENT_VIEWS(videoId), {
-      method: "POST",
-      credentials: "include",
-    });
+    const response = await fetch(
+      ENDPOINTS.VIDEOS.INCREMENT_VIEWS(videoId),
+      {
+        method: "POST",
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to count video view");
+    }
+
+    const data = await response.json();
+
+    // Update views immediately on frontend
+    if (data?.data?.views !== undefined) {
+      setCurrentVideo((prev) =>
+        prev ? { ...prev, views: data.data.views } : prev
+      );
+    }
   } catch (err) {
     hasCountedView.current = false;
     console.error("Failed to count video view:", err);
