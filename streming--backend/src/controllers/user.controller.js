@@ -218,7 +218,7 @@ const refreshAccessToken = asyncHandler(async(req,res) =>{
             throw new ApiError(401, "Invalid Access Token")
         }
 
-        const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
+        const {accessToken, refreshToken: newRefreshToken} = await generateAccessAndRefreshToken(user._id)
 
         return res
         .status(200)

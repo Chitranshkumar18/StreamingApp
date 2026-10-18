@@ -11,16 +11,29 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkCurrentUser = async () => {
       try {
-        const response = await fetch(ENDPOINTS.AUTH.CURRENT_USER, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
+let response = await fetch(ENDPOINTS.AUTH.CURRENT_USER, {
+  method: "GET",
+  credentials: "include",
+});
 
-        if (response.ok) {
-          const data = await response.json();
+
+
+// Access token expire hua? Refresh karke ek baar dobara try karo
+    if (response.status === 401) {
+        const refreshRes = await fetch(ENDPOINTS.AUTH.REFRESH_TOKEN, {
+            method: "POST",
+            credentials: "include",
+          });
+        if (refreshRes.ok) {
+            response = await fetch(ENDPOINTS.AUTH.CURRENT_USER, {
+                method: "GET",
+                credentials: "include",
+            });
+        }
+    }       
+
+    if (response.ok) {
+        const data = await response.json();
           if (data?.data) {
             setUser(data.data);
           } else {
