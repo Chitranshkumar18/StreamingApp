@@ -6,17 +6,17 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 
-const getAllVideos = asyncHandler(async(req,res)=>{
-   // Query parameters lena — jaise page, limit, query, sortBy, sortType. ------->>> req.query gets values from URL.
-   //Pagination values validate/default karna.
-   //Agar search query hai to title/description ke basis par filter banana.
-   //Sirf published videos fetch karna.
-   //Required fields ko populate karna, jaise owner.
-   //Sorting apply karna.
-   //Pagination apply karna.
-   //Videos find karna.
-   //Agar videos nahi hain to appropriate response dena.
-   //Videos + pagination information return karna.
+const getAllVideos = asyncHandler(async (req, res) => {
+    // Query parameters lena — jaise page, limit, query, sortBy, sortType. ------->>> req.query gets values from URL.
+    //Pagination values validate/default karna.
+    //Agar search query hai to title/description ke basis par filter banana.
+    //Sirf published videos fetch karna.
+    //Required fields ko populate karna, jaise owner.
+    //Sorting apply karna.
+    //Pagination apply karna.
+    //Videos find karna.
+    //Agar videos nahi hain to appropriate response dena.
+    //Videos + pagination information return karna.
 
 
     // Query parameters
@@ -113,7 +113,7 @@ const getAllVideos = asyncHandler(async(req,res)=>{
                 "Videos fetched successfully"
             )
         );
-  
+
 
 })
 
@@ -121,29 +121,29 @@ const getAllVideos = asyncHandler(async(req,res)=>{
 const publishAVideo = asyncHandler(async (req, res) => {
 
 
-        // Request se video details lena:
-        // videoFile
-        // thumbnail
-        // title
-        // description
-        // duration etc. — tumhare model ke according.
-        // Logged-in user ki ID lena.
-        // Check karna required fields available hain.
-        // Video file available hai ya nahi check karna.
-        // Thumbnail available hai ya nahi check karna.
-        // Video file ko cloud storage par upload karna.
-        // Thumbnail ko cloud storage par upload karna.
-        // Upload ke baad returned URLs lena.
-        // Video document create karna with:
-        // title
-        // description
-        // videoFile URL
-        // thumbnail URL
-        // owner
-        // duration etc.
-        // Database mein video create karna.
-        // Agar database creation fail ho to uploaded resources ko handle/cleanup karna.
-        // Created video return karna.
+    // Request se video details lena:
+    // videoFile
+    // thumbnail
+    // title
+    // description
+    // duration etc. — tumhare model ke according.
+    // Logged-in user ki ID lena.
+    // Check karna required fields available hain.
+    // Video file available hai ya nahi check karna.
+    // Thumbnail available hai ya nahi check karna.
+    // Video file ko cloud storage par upload karna.
+    // Thumbnail ko cloud storage par upload karna.
+    // Upload ke baad returned URLs lena.
+    // Video document create karna with:
+    // title
+    // description
+    // videoFile URL
+    // thumbnail URL
+    // owner
+    // duration etc.
+    // Database mein video create karna.
+    // Agar database creation fail ho to uploaded resources ko handle/cleanup karna.
+    // Created video return karna.
 
     // 1. Request se video details lena:
     // videoFile, thumbnail, title, description, duration, isPublished
@@ -151,7 +151,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         title,
         description,
         duration = 0,
-        isPublished= true
+        isPublished = true
     } = req.body;
 
     // 2. Logged-in user ki ID lena
@@ -217,7 +217,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         thumbnailPublicId: thumbnailPublicId,
         title: title.trim(),
         description: description.trim(),
-        duration: Number(duration) || 0,
+        duration: Math.round(videoFile.duration) || Number(duration) || 0,
         isPublished: publishedStatus,
         owner: userId
     });
@@ -564,7 +564,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
 
 
-export{
+export {
     getAllVideos,
     getVideoById,
     incrementVideoViews,
