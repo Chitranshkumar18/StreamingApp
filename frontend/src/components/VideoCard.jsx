@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MoreVertical, Play, Clock, Share2, BookmarkPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -55,6 +55,34 @@ export default function VideoCard({
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
+
+
+  
+
+ // For hover effect
+  const [isPreview, setIsPreview] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const hoverTimer = useRef(null);
+
+  const handleMouseEnter = () => {
+    hoverTimer.current = setTimeout(() => setIsPreview(true), 400);
+  };
+
+  const handleMouseLeave = () => {
+    clearTimeout(hoverTimer.current);
+    setIsPreview(false);
+    setVideoReady(false);
+  };
+
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+// for hover effect
+
+
+
+
+
+
   // Extract from video object if provided, otherwise fallback to individual props
   const id = video?._id || videoId || "preview";
   const displayTitle = video?.title || title || "Untitled Video";
@@ -93,6 +121,8 @@ export default function VideoCard({
       {/* Thumbnail Area */}
       <Link
         to={`/watch/${id}`}
+        onMouseEnter={handleMouseEnter} //change for the hover to play 
+        onMouseLeave={handleMouseLeave} // change for the hover to play  
         className="relative block w-full aspect-video rounded-xl overflow-hidden bg-slate-900/80 border border-slate-800/80 group-hover:border-slate-700/80 transition-all duration-300"
       >
         {displayThumbnail ? (
@@ -108,6 +138,20 @@ export default function VideoCard({
             </div>
           </div>
         )}
+        {isPreview && video?.videoFile && ( //change for the hover to play 
+          <video
+            src={video.videoFile}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="none"
+            onLoadedData={() => setVideoReady(true)}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              videoReady ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        )} 
 
         {/* Duration badge */}
         {displayDuration && (
